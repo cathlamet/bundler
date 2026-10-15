@@ -59,6 +59,7 @@ console.log("\n=================================================================
 const { values } = parseArgs({
   strict: true,
   options: {
+    cwd: { type: 'string', short: 'c', default: process.cwd() },
     input: { type: 'string', short: 'i', default: './cathlamet.config.ts' },
     output: { type: 'string', short: 'o', default: 'dist' },
     dev: { type: 'boolean', short: 'd' },
@@ -69,24 +70,19 @@ if (!values.input?.length || !values.output?.length) {
   throw new Error("Must provide input and output paths");
 }
 
-const root = process.cwd();
-const configurationFile = join(root, values.input);
-const targetDir = join(root, values.output);
-
 const uniqueHash = values.dev ? 'dev' : crypto.randomUUID();
-const targetWithVersion = join(targetDir, uniqueHash);
-
+const targetWithVersion = join(join(values.cwd, values.output), uniqueHash);
 mkdirSync(targetWithVersion, { recursive: true });
 
-console.log(`input: ${configurationFile}`);
+console.log(`input: ${join(values.cwd, values.input)}`);
 console.log(`output: ${targetWithVersion}`);
 
 console.log("\n-------------------------------------------------------------------------------\n");
 
-const assetLoader = new FileAssetManfiestLoader(dirname(configurationFile));
+const assetLoader = new FileAssetManfiestLoader(values.cwd);
 const assetRegistry = new AssetRegistry();
 
-Promise.resolve(loadManifests(assetLoader, configurationFile))
+Promise.resolve(loadManifests(assetLoader, values.input))
   .then(writeAssets(assetRegistry, targetWithVersion))
   .then(() => {
     console.log("\nFinished successfully, thank you for using bundler.js!");
