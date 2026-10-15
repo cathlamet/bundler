@@ -41,7 +41,7 @@ export default defineConfig({
         'three',
         'crypto', 'node:crypto',
         'child_process', 'node:child_process',
-        'fs', 'node:fs',
+        'fs', 'node:fs', 'node:fs/promises',
         'opentype.js',
         'path', 'node:path',
         'node:util',
