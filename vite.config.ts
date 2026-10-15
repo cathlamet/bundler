@@ -44,8 +44,13 @@ export default defineConfig({
         'fs', 'node:fs',
         'opentype.js',
         'path', 'node:path',
-        'sharp'
-      ]
+        'node:util',
+        'sharp',
+        'zlib'
+      ],
+      output: {
+        format: 'es'
+      }
     },
     target: 'esnext',
     sourcemap: true,
