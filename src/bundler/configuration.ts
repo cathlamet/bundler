@@ -139,23 +139,29 @@ export class Configuration {
     for (const assetManifestPath of (configuration.assets ?? [])) {
       const manifestBuffer = await loader.load(assetManifestPath);
       if (!manifestBuffer) {
+        console.log(`Unable to load ${assetManifestPath}`);
         missingManifestPaths.push(assetManifestPath);
         continue;
       }
 
-      const manifest = parseManifestJson(JSON.parse(new TextDecoder('utf-8').decode(manifestBuffer)));
-      if (!manifest) {
+      const parsedManifests = Array.from(JSON.parse(new TextDecoder('utf-8').decode(manifestBuffer))).map(parseManifestJson).filter(v => !!v);
+      if (!parsedManifests.length) {
+        console.log(`Failed to load ${assetManifestPath}`);
         missingManifestPaths.push(assetManifestPath);
         continue;
       }
 
-      const manifestContext = await manifest.load(loader.from(assetManifestPath));
-      if (!manifestContext) {
-        missingManifestPaths.push(assetManifestPath);
-        continue;
+      for (const manifest of parsedManifests) {
+        const manifestContext = await manifest.load(loader.from(assetManifestPath));
+        if (!manifestContext) {
+          console.log(`Problem loading ${assetManifestPath}`);
+          missingManifestPaths.push(assetManifestPath);
+          continue;
+        }
+
+        manifests.push([manifest, manifestContext]);
       }
 
-      manifests.push([manifest, manifestContext]);
     }
 
     return new Configuration(configuration.name, missingManifestPaths, manifests);

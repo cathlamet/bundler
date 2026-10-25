@@ -32,6 +32,11 @@ async function loadManifests (loader: AssetManifestLoader, configurationFile: st
   const configuration = await Configuration.load(loader, configurationFile);
 
   console.log(`Loaded ${configuration.manifestById.size} manifests and ${configuration.contextById.size} contexts, with ${configuration.missingAssetPaths.length} missing`);
+  if (configuration.missingAssetPaths) {
+    for (const path of configuration.missingAssetPaths) {
+      console.log(`Missing path: ${path}`);
+    }
+  }
   return configuration;
 }
 
@@ -39,15 +44,16 @@ function writeAssets (registry: AssetRegistry, outputDirectory: string): (config
   return async (configuration: Configuration) => {
     const [manifestIdByAssetId, assetByAssetId] = await configuration.compile(registry);
 
+    const packName = configuration.name.toLowerCase().replaceAll(" ", "-");
     const buffer: Uint8Array = packBundle(manifestIdByAssetId, assetByAssetId);
-    console.log(`Bundled pack ${configuration.name} with raw size ${buffer.length} bytes`);
+    console.log(`Bundled pack ${packName}.bin with raw size ${buffer.length} bytes`);
 
     const compressedBuffer = zlib.gzipSync(buffer, {
       level: zlib.constants.Z_BEST_COMPRESSION,
     });
 
-    await writeFile(join(outputDirectory, `${configuration.name}.bin`), compressedBuffer);
-    console.log(`Pack ${configuration.name} compressed and saved with size ${compressedBuffer.length} bytes`);
+    await writeFile(join(outputDirectory, `${packName}.bin`), compressedBuffer);
+    console.log(`Pack ${packName}.bin compressed and saved with size ${compressedBuffer.length} bytes`);
   };
 }
 

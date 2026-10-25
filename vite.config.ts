@@ -18,7 +18,7 @@ export default defineConfig({
 
         if (fs.existsSync(srcFile)) {
           fs.copyFileSync(srcFile, destFile);
-          console.log('✓ Successfully copied libktx.wasm to dist/');
+          console.log('Successfully copied libktx.wasm to dist/');
         }
       }
     }
@@ -49,7 +49,21 @@ export default defineConfig({
         'zlib'
       ],
       output: {
-        format: 'es'
+        format: 'es',
+        banner: `
+          let require;
+          if (typeof globalThis.require !== 'undefined') {
+            require = globalThis.require;
+          } else if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+            const { createRequire } = await import('module');
+            require = createRequire(import.meta.url);
+          } else {
+            require = function(id) {
+              throw new Error("require() is not supported in this environment for: " + id);
+            };
+          }
+          const __dirname = typeof import.meta.dirname !== 'undefined' ? import.meta.dirname : (typeof location !== 'undefined' ? location.pathname : '');
+        `
       }
     },
     target: 'esnext',

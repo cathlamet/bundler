@@ -57,7 +57,6 @@ export class SlugGenerator {
     }
 
     generate (font: any): SluggishData {
-        let ignoredCodePoints = 0;
         let curvesTexData: number[] = [];
         let bandsTexBandOffsets: number[] = [];
         let bandsTexCurveOffsets: number[] = [];
@@ -128,10 +127,49 @@ export class SlugGenerator {
                     firstCurve = false;
                     currentX = nextX; currentY = nextY;
                 } else if (cmd.type === 'C') {
-                    console.warn(`U+${cp.toString(16)} has bicubic curves. Slug requires quadratic.`);
-                    ignoredCodePoints++;
-                    curves = null;
-                    break;
+                    let nextX = (cmd.x || 0) - gx1;
+                    let nextY = (cmd.y || 0) - gy1;
+
+                    let p0x = currentX, p0y = currentY;
+                    let p1x = (cmd.x1 || 0) - gx1, p1y = (cmd.y1 || 0) - gy1;
+                    let p2x = (cmd.x2 || 0) - gx1, p2y = (cmd.y2 || 0) - gy1;
+                    let p3x = nextX, p3y = nextY;
+
+                    // Subdivide the cubic Bezier curve into two quadratic Bezier curves
+                    // using exact endpoint, midpoint, and tangent matching.
+
+                    // c0 = lerp(p0, p1, 0.75) => 0.25*p0 + 0.75*p1
+                    let c0x = p0x + 0.75 * (p1x - p0x);
+                    let c0y = p0y + 0.75 * (p1y - p0y);
+
+                    // c1 = lerp(p3, p2, 0.75) => 0.25*p3 + 0.75*p2
+                    let c1x = p3x + 0.75 * (p2x - p3x);
+                    let c1y = p3y + 0.75 * (p2y - p3y);
+
+                    // m = lerp(c0, c1, 0.5) (This evaluates exactly to the midpoint of the cubic curve at t=0.5)
+                    let mx = c0x + 0.5 * (c1x - c0x);
+                    let my = c0y + 0.5 * (c1y - c0y);
+
+                    // Push the first quadratic curve (from p0 to m)
+                    curves.push({
+                        first: firstCurve, x1: p0x, y1: p0y,
+                        x2: c0x, y2: c0y,
+                        x3: mx, y3: my,
+                        texelIndex: 0
+                    });
+
+                    // Subsequent curves in the same subpath are not the "first" curve
+                    firstCurve = false;
+
+                    // Push the second quadratic curve (from m to p3)
+                    curves.push({
+                        first: false, x1: mx, y1: my,
+                        x2: c1x, y2: c1y,
+                        x3: p3x, y3: p3y,
+                        texelIndex: 0
+                    });
+
+                    currentX = nextX; currentY = nextY;
                 } else if (cmd.type === 'Z') {
                     if (currentX !== startOfShapeX || currentY !== startOfShapeY) {
                         curves.push({
